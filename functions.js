@@ -1,111 +1,92 @@
-const Entity = require('./Entity');
+const Entity = require('./entity');
 
 function cloneEntityAndRelatedEntities(jsonData, id) {
-    if (!validateJsonData(jsonData)) {
-        throw new Error();
-    }
+    const usedIds = (() => {
+        const usedIdsSet = new Set();
+        jsonData.entities.forEach(entity => {
+            usedIdsSet.add(entity.entity_id);
+        });
+        return usedIdsSet;
+    })();
+    const initialCloneId = generateId(usedIds);
 
-    const initialCloneId = generateId();
-    const entityMap = createEntityMap(jsonData, id, initialCloneId);
+    const idToEntityMap = createEntityMap(jsonData, id, initialCloneId);
+    const originalIdToClonedEntityMap = cloneEntities(idToEntityMap, id, initialCloneId, usedIds);
 
-    // clone related entities, create links between them
-    const clonedEntitiesMap = cloneRelatedEntities(entityMap, id, initialCloneId);
-
-    // add to entity map
-    // convert entity map to json structure
-    return convertEntityMapsToJson(entityMap, clonedEntitiesMap);
+    return convertEntityMapsToJson(idToEntityMap, originalIdToClonedEntityMap);
 }
 
-function validateJsonData(jsonData) {
-    // do some validation
-    // validate input id also???
-    return true;
-}
-
-// returns a map of entity objects
-// creates links to initial cloned entity
 function createEntityMap(jsonData, id, initialCloneId) {
-    const entityMap = new Map();
+    const idToEntityMap = new Map();
 
     jsonData.entities.forEach(entity => {
         const { entity_id, name, description } = entity;
-        entityMap.set(entity_id, new Entity(entity_id, name, description));
+        idToEntityMap.set(entity_id, new Entity(entity_id, name, description));
     });
     jsonData.links.forEach(link => {
-        const entity = entityMap.get(link.from);
-        entity.linksTo.push(link.to);
-        if (link.to === id) {
-            entity.linksTo.push(initialCloneId);
+        const entity = idToEntityMap.get(link.from);
+        entity.links.push(link.to);
+        if (link.to === id) { // create links to initial cloned entity
+            entity.links.push(initialCloneId);
         }
     });
 
-    return entityMap;
+    return idToEntityMap;
 }
 
-// creates a new map of cloned entities with links
-// store clones in a map, with the key = original entity id, value = cloned entity
-function cloneRelatedEntities(entityMap, id, initialCloneId) {
-    const initialEntity = entityMap.get(id);
+function cloneEntities(idToEntityMap, id, initialCloneId, usedIds) {
+    const initialEntity = idToEntityMap.get(id);
     const initialClone = initialEntity.clone(initialCloneId);
 
-    const clonedEntitiesMap = new Map();
-    clonedEntitiesMap.set(id, initialClone);
+    const originalIdToClonedEntityMap = new Map();
+    originalIdToClonedEntityMap.set(id, initialClone);
 
-    // set for cycle detection
-    const visitedCycleSet = new Set();
+    const visitedEntityIds = new Set();
 
-    clonedEntitiesMap.forEach((clonedEntity, originalId) => {
-        const originalEntity = entityMap.get(originalId);
-        originalEntity.linksTo.forEach(linkedId => {
-            if (!visitedCycleSet.has(linkedId)) {
-                if (clonedEntitiesMap.has(linkedId)) {
-                    const clonedLinkedEntity = clonedEntitiesMap.get(linkedId);
-                    clonedEntity.linksTo.push(clonedLinkedEntity.id);
-                    visitedCycleSet.add(clonedLinkedEntity.id);
-                } else { // create a clone of the linked entity
-                    const linkedEntity = entityMap.get(linkedId);
-                    const clonedLinkedEntity = linkedEntity.clone(generateId());
-                    clonedEntitiesMap.set(linkedId, clonedLinkedEntity);
-                    // link the current cloned entity to the new created clone entity
-                    clonedEntity.linksTo.push(clonedLinkedEntity.id);
-                }
+    originalIdToClonedEntityMap.forEach((clonedEntity, originalId) => {
+        const originalEntity = idToEntityMap.get(originalId);
+        originalEntity.links.forEach(linkedId => {
+            if (visitedEntityIds.has(linkedId)) {
+                return;
+            }    
+            if (originalIdToClonedEntityMap.has(linkedId)) {
+                const clonedLinkedEntity = originalIdToClonedEntityMap.get(linkedId);
+                clonedEntity.links.push(clonedLinkedEntity.id);
+                visitedEntityIds.add(clonedLinkedEntity.id);
+            } else {
+                const linkedEntity = idToEntityMap.get(linkedId);
+                const clonedLinkedEntity = linkedEntity.clone(generateId(usedIds));
+                originalIdToClonedEntityMap.set(linkedId, clonedLinkedEntity);
+                clonedEntity.links.push(clonedLinkedEntity.id);
             }
         });
     });
-    return clonedEntitiesMap;
+    return originalIdToClonedEntityMap;
 }
 
-function convertEntityMapsToJson(entityMap, clonedEntitiesMap) {
+function convertEntityMapsToJson(idToEntityMap, originalIdToClonedEntityMap) {
     const entities = [];
     const links = [];
     const parseMap = (entityMap) => {
         entityMap.forEach(entity => {
-            const { id, name, description, linksTo } = entity;
-
-            const convertedEntity = {
-                entity_id: id,
-                name: name
-            };
-            if (description) {
-                convertedEntity.description = description
-            }
-            entities.push(convertedEntity);
-
-            linksTo.forEach(linkId => {
-                links.push({ from: id, to: linkId });
-            });
+            const entityJSON = entity.toJSON();
+            entities.push(entityJSON.entity);
+            links.push(...entityJSON.links);
         });
     }
-    parseMap(entityMap);
-    parseMap(clonedEntitiesMap);
+    parseMap(idToEntityMap);
+    parseMap(originalIdToClonedEntityMap);
     return { entities, links };
 }
 
-function generateId() {
-    const randomNum = () => Math.round(Math.random() * 100000);
-    let id = randomNum();
-    // while (id not unique...)
-    return id;
+function generateId(usedIds) {
+    const randomNum = () => Math.round(Math.random() * 1000000);
+    let newId = randomNum();
+    while (usedIds.has(newId)) {
+        newId = randomNum();
+    }
+    usedIds.add(newId);
+    return newId;
 }
 
 module.exports = {

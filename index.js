@@ -1,14 +1,10 @@
 const fs = require('fs');
 const path = require('path');
-const {
-    cloneRelatedEntities,
-    createLinksToInitialClone,
-    createLinksBetweenClonedEntities,
-} = require('./functions');
+const { cloneEntityAndRelatedEntities } = require('./functions');
 
-console.log(cloneEntityAndRelatedEntities());
+console.log(cloneEntity());
 
-function cloneEntityAndRelatedEntities() {
+function cloneEntity() {
     // command line arguments/inputs
     const jsonData = (() => {
         const filePath = path.join(__dirname, process.argv[2]);
@@ -17,19 +13,5 @@ function cloneEntityAndRelatedEntities() {
     })();
     const id = Number(process.argv[3]);
 
-    // clone related entities
-    const clonedEntitiesMap = cloneRelatedEntities(jsonData, id);
-    const clonedEntities = [];
-    clonedEntitiesMap.forEach(entity => {
-        clonedEntities.push(entity);
-    })
-
-    // create links
-    const linksToInitialClone = createLinksToInitialClone(jsonData.links, id, clonedEntities[0]);
-    const linksBetweenClonedEntities = createLinksBetweenClonedEntities(jsonData.links, clonedEntitiesMap);
-
-    return {
-        entities: [...jsonData.entities, ...clonedEntities],
-        links: [...jsonData.links, ...linksToInitialClone, ...linksBetweenClonedEntities]
-    };
+    return cloneEntityAndRelatedEntities(jsonData, id);
 }

@@ -1,107 +1,113 @@
-function validateJsonData(jsonData) {
-    
+const Entity = require('./Entity');
+
+function cloneEntityAndRelatedEntities(jsonData, id) {
+    if (!validateJsonData(jsonData)) {
+        throw new Error();
+    }
+
+    const initialCloneId = generateId();
+    const entityMap = createEntityMap(jsonData, id, initialCloneId);
+
+    // clone related entities, create links between them
+    const clonedEntitiesMap = cloneRelatedEntities(entityMap, id, initialCloneId);
+
+    // add to entity map
+    // convert entity map to json structure
+    return convertEntityMapsToJson(entityMap, clonedEntitiesMap);
 }
 
-function findEntityById(entities, id) {
-    let targetEntity = null;
+function validateJsonData(jsonData) {
+    // do some validation
+    // validate input id also???
+    return true;
+}
 
-    entities.forEach(entity => {
-        if (entity.entity_id === id) {
-            targetEntity = entity;
+// returns a map of entity objects
+// creates links to initial cloned entity
+function createEntityMap(jsonData, id, initialCloneId) {
+    const entityMap = new Map();
+
+    jsonData.entities.forEach(entity => {
+        const { entity_id, name, description } = entity;
+        entityMap.set(entity_id, new Entity(entity_id, name, description));
+    });
+    jsonData.links.forEach(link => {
+        const entity = entityMap.get(link.from);
+        entity.linksTo.push(link.to);
+        if (link.to === id) {
+            entity.linksTo.push(initialCloneId);
         }
     });
 
-    if (!targetEntity) {
-        throw new Error(`entity_id ${id} not found`);
-    } else {
-        return targetEntity;
-    }
+    return entityMap;
 }
 
-// finds related entities to input id entity and creates clones
+// creates a new map of cloned entities with links
 // store clones in a map, with the key = original entity id, value = cloned entity
-function cloneRelatedEntities(jsonData, id) {
-    const { entities, links } = jsonData;
-    const initialEntity = findEntityById(entities, id);
-    const initialClone = createClone(entities, initialEntity);
+function cloneRelatedEntities(entityMap, id, initialCloneId) {
+    const initialEntity = entityMap.get(id);
+    const initialClone = initialEntity.clone(initialCloneId);
 
     const clonedEntitiesMap = new Map();
     clonedEntitiesMap.set(id, initialClone);
 
-    clonedEntitiesMap.forEach((entity, originalId) => {
-        links.forEach(link => {
-            if (link.from === originalId) {
-                // clone linked entity
-                let linkedEntity = findEntityById(entities, link.to);
-                let clonedLinkedEntity = createClone(entities, linkedEntity);
-                clonedEntitiesMap.set(link.to, clonedLinkedEntity);
+    // set for cycle detection
+    const visitedCycleSet = new Set();
+
+    clonedEntitiesMap.forEach((clonedEntity, originalId) => {
+        const originalEntity = entityMap.get(originalId);
+        originalEntity.linksTo.forEach(linkedId => {
+            if (!visitedCycleSet.has(linkedId)) {
+                if (clonedEntitiesMap.has(linkedId)) {
+                    const clonedLinkedEntity = clonedEntitiesMap.get(linkedId);
+                    clonedEntity.linksTo.push(clonedLinkedEntity.id);
+                    visitedCycleSet.add(clonedLinkedEntity.id);
+                } else { // create a clone of the linked entity
+                    const linkedEntity = entityMap.get(linkedId);
+                    const clonedLinkedEntity = linkedEntity.clone(generateId());
+                    clonedEntitiesMap.set(linkedId, clonedLinkedEntity);
+                    // link the current cloned entity to the new created clone entity
+                    clonedEntity.linksTo.push(clonedLinkedEntity.id);
+                }
             }
         });
-    })
+    });
     return clonedEntitiesMap;
 }
 
-function createLinksToInitialClone(links, id, initialClone) {
-    const newLinks = [];
-    links.forEach(link => {
-        if (link.to === id) {
-            newLinks.push(createLink(link.from, initialClone.entity_id));
-        }
-    });
-    return newLinks;
-}
+function convertEntityMapsToJson(entityMap, clonedEntitiesMap) {
+    const entities = [];
+    const links = [];
+    const parseMap = (entityMap) => {
+        entityMap.forEach(entity => {
+            const { id, name, description, linksTo } = entity;
 
-function createLinksBetweenClonedEntities(links, clonedEntitiesMap) {
-    const newLinks = [];
-    clonedEntitiesMap.forEach((entity, originalId) => {
-        links.forEach(link => {
-            if (link.from === originalId) {
-                let clonedIdFrom = clonedEntitiesMap.get(link.from).entity_id
-                let clonedIdTo = clonedEntitiesMap.get(link.to).entity_id;
-                newLinks.push(createLink(clonedIdFrom, clonedIdTo));
+            const convertedEntity = {
+                entity_id: id,
+                name: name
+            };
+            if (description) {
+                convertedEntity.description = description
             }
+            entities.push(convertedEntity);
+
+            linksTo.forEach(linkId => {
+                links.push({ from: id, to: linkId });
+            });
         });
-    });
-    return newLinks;
-}
-
-function createLink(from, to) {
-    return { from, to };
-}
-
-function createClone(entities, entity) {
-    const newEntity = JSON.parse(JSON.stringify(entity));
-    const usedIds = (() => {
-        const usedIdsSet = new Set();
-        entities.forEach(entity => {
-            usedIdsSet.add(entity.entity_id);
-        });
-        return usedIdsSet;
-    })();
-
-    newEntity.entity_id = generateID(usedIds);
-    return newEntity;
-}
-
-function generateID(usedIds) {
-    let id = randomNum();
-    while (usedIds.has(id)) {
-        id = randomNum();
     }
+    parseMap(entityMap);
+    parseMap(clonedEntitiesMap);
+    return { entities, links };
+}
+
+function generateId() {
+    const randomNum = () => Math.round(Math.random() * 100000);
+    let id = randomNum();
+    // while (id not unique...)
     return id;
 }
 
-function randomNum() {
-    return Math.round(Math.random() * 100000);
-}
-
 module.exports = {
-    validateJsonData,
-    findEntityById,
-    cloneRelatedEntities,
-    createLinksToInitialClone,
-    createLinksBetweenClonedEntities,
-    createClone,
-    createLink,
-    generateID
+    cloneEntityAndRelatedEntities
 }

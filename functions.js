@@ -1,13 +1,7 @@
 const Entity = require('./entity');
 
 function cloneEntityAndRelatedEntities(jsonData, id) {
-    const usedIds = (() => {
-        const usedIdsSet = new Set();
-        jsonData.entities.forEach(entity => {
-            usedIdsSet.add(entity.entity_id);
-        });
-        return usedIdsSet;
-    })();
+    const usedIds = createUsedIdsSet(jsonData);
     const initialCloneId = generateId(usedIds);
 
     const idToEntityMap = createEntityMap(jsonData, id, initialCloneId);
@@ -25,23 +19,23 @@ function createEntityMap(jsonData, id, initialCloneId) {
     });
     jsonData.links.forEach(link => {
         const entity = idToEntityMap.get(link.from);
-        entity.links.push(link.to);
+        entity.addLink(link.to);
         if (link.to === id) { // create links to initial cloned entity
-            entity.links.push(initialCloneId);
+            entity.addLink(initialCloneId);
         }
     });
-
     return idToEntityMap;
 }
 
 function cloneEntities(idToEntityMap, id, initialCloneId, usedIds) {
+    // create initial clone
     const initialEntity = idToEntityMap.get(id);
     const initialClone = initialEntity.clone(initialCloneId);
 
     const originalIdToClonedEntityMap = new Map();
     originalIdToClonedEntityMap.set(id, initialClone);
 
-    const visitedEntityIds = new Set();
+    const visitedEntityIds = new Set(); // for cycle detection
 
     originalIdToClonedEntityMap.forEach((clonedEntity, originalId) => {
         const originalEntity = idToEntityMap.get(originalId);
@@ -51,13 +45,13 @@ function cloneEntities(idToEntityMap, id, initialCloneId, usedIds) {
             }    
             if (originalIdToClonedEntityMap.has(linkedId)) {
                 const clonedLinkedEntity = originalIdToClonedEntityMap.get(linkedId);
-                clonedEntity.links.push(clonedLinkedEntity.id);
+                clonedEntity.addLink(clonedLinkedEntity.id);
                 visitedEntityIds.add(clonedLinkedEntity.id);
             } else {
                 const linkedEntity = idToEntityMap.get(linkedId);
                 const clonedLinkedEntity = linkedEntity.clone(generateId(usedIds));
                 originalIdToClonedEntityMap.set(linkedId, clonedLinkedEntity);
-                clonedEntity.links.push(clonedLinkedEntity.id);
+                clonedEntity.addLink(clonedLinkedEntity.id);
             }
         });
     });
@@ -67,16 +61,24 @@ function cloneEntities(idToEntityMap, id, initialCloneId, usedIds) {
 function convertEntityMapsToJson(idToEntityMap, originalIdToClonedEntityMap) {
     const entities = [];
     const links = [];
-    const parseMap = (entityMap) => {
+    const translateMap = (entityMap) => {
         entityMap.forEach(entity => {
             const entityJSON = entity.toJSON();
             entities.push(entityJSON.entity);
             links.push(...entityJSON.links);
         });
     }
-    parseMap(idToEntityMap);
-    parseMap(originalIdToClonedEntityMap);
+    translateMap(idToEntityMap);
+    translateMap(originalIdToClonedEntityMap);
     return { entities, links };
+}
+
+function createUsedIdsSet(jsonData) {
+    const usedIdsSet = new Set();
+    jsonData.entities.forEach(entity => {
+        usedIdsSet.add(entity.entity_id);
+    });
+    return usedIdsSet;
 }
 
 function generateId(usedIds) {
@@ -90,5 +92,10 @@ function generateId(usedIds) {
 }
 
 module.exports = {
-    cloneEntityAndRelatedEntities
+    cloneEntityAndRelatedEntities,
+    createEntityMap,
+    cloneEntities,
+    convertEntityMapsToJson,
+    createUsedIdsSet,
+    generateId
 }

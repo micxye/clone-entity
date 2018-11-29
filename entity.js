@@ -3,11 +3,15 @@ class Entity {
         this.id = id;
         this.name = name;
         this.description = description;
-        this.links = [];
+        this.links = new Set();
     }
 
-    clone(newId) {
-        return new Entity(newId, this.name, this.description);
+    addLink(linkedEntityId) {
+        this.links.add(linkedEntityId);
+    }
+
+    clone(cloneId) {
+        return new Entity(cloneId, this.name, this.description);
     }
 
     toJSON() {

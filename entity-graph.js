@@ -41,7 +41,7 @@ class EntityGraph {
         _addLinksToInitialClone(this.adjacencyList, this.links, id, initialClone.id);
         _cloneEntitiesAndAddToGraph(this.adjacencyList, id, initialClone, this.usedIds);
         
-        const newEntitiesAndLinks = _createEntitiesAndLinks(this.adjacencyList);
+        const newEntitiesAndLinks = _formatEntitiesAndLinks(this.adjacencyList);
         this.entities = newEntitiesAndLinks.entities;
         this.links = newEntitiesAndLinks.links;
 
@@ -92,7 +92,7 @@ function _addLinksToInitialClone(idToEntity, links, originalId, initialCloneId) 
     });
 }
 
-function _createEntitiesAndLinks(entityGraph) {
+function _formatEntitiesAndLinks(entityGraph) {
     const newEntities = [];
     const newLinks = [];
     const parseGraph = (entityGraph) => {

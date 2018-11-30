@@ -1,4 +1,4 @@
-const { jsonData, cycleJsonData } = require('./json-test-data');
+const { parsedJsonData, parsedCycleJsonData } = require('./json-test-data');
 const EntityGraph = require('../entity-graph');
 const Entity = require('../entity');
 
@@ -10,7 +10,7 @@ describe('EntityGraph', () => {
             expect(() => eg.constructGraph({ entities: { entity_id: '1' }})).toThrow();
         });
 
-        eg.constructGraph(jsonData);
+        eg.constructGraph(parsedJsonData);
 
         it('should create and return a map of ids to entities', () => {
             expect(eg.adjacencyList.has(3)).toBe(true);
@@ -27,13 +27,13 @@ describe('EntityGraph', () => {
         });
 
         it('should add the original formatted data to the entities and links properties', () => {
-            expect(eg.entities).toEqual(jsonData.entities);
-            expect(eg.links).toEqual(jsonData.links);
+            expect(eg.entities).toEqual(parsedJsonData.entities);
+            expect(eg.links).toEqual(parsedJsonData.links);
         });
     });
 
     describe('cloneEntityAndRelatedEntities method', () => {
-        it('should throw an error if id is not found in jsonData', () => {
+        it('should throw an error if id is not found in parsedJsonData', () => {
             expect(() => eg.cloneEntityAndRelatedEntities(4)).toThrow();
         });
 
@@ -42,7 +42,7 @@ describe('EntityGraph', () => {
         });
 
         const egCycle = new EntityGraph();
-        egCycle.constructGraph(cycleJsonData);
+        egCycle.constructGraph(parsedCycleJsonData);
         egCycle.cloneEntityAndRelatedEntities(7)
 
         it('should handle link cycles', () => {
@@ -61,7 +61,16 @@ describe('EntityGraph', () => {
             expect(egCycle.links.length).toEqual(10);
         });
     });
-})
+
+    describe('toJSON method', () => {
+        const anotherEg = new EntityGraph();
+        anotherEg.constructGraph(parsedJsonData);
+
+        it('should output valid JSON in the specified format', () => {
+            expect(JSON.parse(anotherEg.toJSON())).toEqual(parsedJsonData);
+        });
+    });
+});
 
 describe('Entity class', () => {
     const entity1 = new Entity(1, 'EntityA', 'the original entity');

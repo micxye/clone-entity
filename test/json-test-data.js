@@ -1,4 +1,4 @@
-const jsonData = {
+const parsedJsonData = {
     "entities": [
         {
             "entity_id": 3,
@@ -38,7 +38,7 @@ const jsonData = {
     ]
 };
 
-const cycleJsonData = {
+const parsedCycleJsonData = {
     "entities": [
         {
             "entity_id": 3,
@@ -82,4 +82,4 @@ const cycleJsonData = {
     ]
 };
 
-module.exports = { jsonData, cycleJsonData };
+module.exports = { parsedJsonData, parsedCycleJsonData };

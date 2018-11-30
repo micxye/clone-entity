@@ -1,6 +1,26 @@
+const schema = require('js-schema');
 const Entity = require('./entity');
 
+const linksSchema = schema({
+    from: Number,
+    to: Number
+});
+
+const entitiesSchema = schema({
+    entity_id: Number,
+    name: String
+});
+
+const validateJson = schema({
+    entities: Array.of(entitiesSchema),
+    links: Array.of(linksSchema),
+});
+
 function cloneEntityAndRelatedEntities(jsonData, id) {
+    if (!validateJson(jsonData)) {
+        throw new Error('Invalid JSON file');
+    }
+
     const usedIds = createUsedIdsSet(jsonData);
     const initialCloneId = generateId(usedIds);
 

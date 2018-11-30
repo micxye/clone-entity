@@ -19,5 +19,8 @@
   "homepage": "https://github.com/micxye/clone-entity#readme",
   "devDependencies": {
     "jest": "^23.6.0"
+  },
+  "dependencies": {
+    "js-schema": "^1.0.1"
   }
 }

@@ -6,8 +6,8 @@ const {
     convertEntityMapsToJson,
     createUsedIdsSet,
     generateId
-} = require('./functions');
-const Entity = require('./entity');
+} = require('../clone-entity');
+const Entity = require('../entity');
 
 describe('Entity class', () => {
     const entity1 = new Entity(1, 'EntityA');

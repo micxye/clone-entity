@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { cloneEntityAndRelatedEntities } = require('./functions');
+const { cloneEntityAndRelatedEntities } = require('./clone-entity');
 
 console.log(cloneEntity());
 

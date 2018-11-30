@@ -8,13 +8,11 @@ This script requires node.js to run. Download that first!
 3. Enter 'npm start [JSONfile] [entityid]'. Make sure to enter the file path for the JSON file relative to the folder!
   
 ```
-npm start example.json 5
+npm start examples/example.json 5
 ```
 
-### To test
+### To Test
 This script uses Jest for unit testing.
-1. Navigate to the folder from the command line
-2. Enter 'npm test' to run tests!
 
 ```
 npm test

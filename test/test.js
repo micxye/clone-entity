@@ -1,13 +1,13 @@
-const { parsedJsonData, parsedCycleJsonData } = require('./json-test-data');
 const EntityGraph = require('../entity-graph');
 const Entity = require('../entity');
+const { parsedJsonData, parsedCycleJsonData } = require('./json-test-data');
 
-describe('EntityGraph', () => {
+describe('EntityGraph class', () => {
     const eg = new EntityGraph();
 
     describe('constructGraph method', () => {
-        it('should throw an error if input is not valid JSON or formatted correctly', () => {
-            expect(() => eg.constructGraph({ entities: { entity_id: '1' }})).toThrow();
+        it('should throw an error if input is not valid', () => {
+            expect(() => eg.constructGraph({ entities: { entity_id: '1' }})).toThrowError('invalid');
         });
 
         eg.constructGraph(parsedJsonData);
@@ -33,8 +33,8 @@ describe('EntityGraph', () => {
     });
 
     describe('cloneEntityAndRelatedEntities method', () => {
-        it('should throw an error if id is not found in parsedJsonData', () => {
-            expect(() => eg.cloneEntityAndRelatedEntities(4)).toThrow();
+        it('should throw an error if id is not found in graph', () => {
+            expect(() => eg.cloneEntityAndRelatedEntities(1)).toThrowError('not found');
         });
 
         it('should clone the input entity and its related entities and add them to the graph', () => {
@@ -54,7 +54,7 @@ describe('EntityGraph', () => {
             expect(egCycle.usedIds.size).toEqual(7);
         });
 
-        it('should update the entities and links properties with the new cloned data', () => {
+        it('should update the entities and links properties with the newly cloned data', () => {
             expect(eg.entities.length).toEqual(7);
             expect(eg.links.length).toEqual(7);
             expect(egCycle.entities.length).toEqual(7);
@@ -73,22 +73,29 @@ describe('EntityGraph', () => {
 });
 
 describe('Entity class', () => {
-    const entity1 = new Entity(1, 'EntityA', 'the original entity');
-    test('addLink method should add an id to the links property', () => {
-        entity1.addLink(2);
-        expect(entity1.links.has(2)).toBe(true);
+    const entityA = new Entity(1, 'EntityA', 'the original entity');
+    
+    describe('addLink method', () => {
+        it('should add an id to the links property', () => {
+            entityA.addLink(2);
+            expect(entityA.links.has(2)).toBe(true);
+        });
     });
 
-    test('clone method should return a new Entity object with the same name & description', () => {
-        const entity1Clone = entity1.clone();
-        expect(entity1Clone.name === entity1.name).toBe(true);
-        expect(entity1Clone.description === entity1.description).toBe(true);
+    describe('clone method', () => {
+        it('should return a new Entity object with the same name & description', () => {
+            const entityAClone = entityA.clone();
+            expect(entityAClone.name === entityA.name).toBe(true);
+            expect(entityAClone.description === entityA.description).toBe(true);
+        });
     });
 
-    test('format method should return an object formatted to the specification', () => {
-        const formattedEntity = entity1.format();
-        expect(formattedEntity.entity.entity_id === entity1.id).toBe(true);
-        expect(formattedEntity.entity.name === entity1.name).toBe(true);
-        expect(formattedEntity.links[0].to).toEqual(Array.from(entity1.links)[0]);
+    describe('format method', () => {
+        it('should return an object formatted to the specification', () => {
+            const formattedEntity = entityA.format();
+            expect(formattedEntity.entity.entity_id === entityA.id).toBe(true);
+            expect(formattedEntity.entity.name === entityA.name).toBe(true);
+            expect(formattedEntity.links[0].to).toEqual(Array.from(entityA.links)[0]);
+        });
     });
 });

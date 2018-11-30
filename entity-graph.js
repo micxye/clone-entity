@@ -10,12 +10,7 @@ class EntityGraph {
     }
 
     constructGraph(parsedJsonData) {
-        const linksSchema = schema({ from: Number, to: Number });
-        const entitiesSchema = schema({ entity_id: Number, name: String });
-        const validateJson = schema({ entities: Array.of(entitiesSchema), links: Array.of(linksSchema) });
-        if (!validateJson(parsedJsonData)) {
-            throw new Error('Invalid JSON file');
-        }
+        _validateData(parsedJsonData);
         this.entities = parsedJsonData.entities;
         this.links = parsedJsonData.links;
 
@@ -36,6 +31,9 @@ class EntityGraph {
 
     cloneEntityAndRelatedEntities(id) {
         const initialEntity = this.adjacencyList.get(id);
+        if (!initialEntity) {
+            throw new Error(`input entity id ${id} not found`);
+        }
         const initialClone = initialEntity.clone(this.usedIds);
 
         _addLinksToInitialClone(this.adjacencyList, this.links, id, initialClone.id);
@@ -48,8 +46,17 @@ class EntityGraph {
         return this.adjacencyList;
     }
 
-    toJSON() {
-        return JSON.stringify({ entities: this.entities, links: this.links }, null, 4);
+    toJSON(space = 4) {
+        return JSON.stringify({ entities: this.entities, links: this.links }, null, space);
+    }
+}
+
+function _validateData(parsedJsonData) {
+    const linksSchema = schema({ from: Number, to: Number });
+    const entitiesSchema = schema({ entity_id: Number, name: String });
+    const validateJson = schema({ entities: Array.of(entitiesSchema), links: Array.of(linksSchema) });
+    if (!validateJson(parsedJsonData)) {
+        throw new Error('invalid data format');
     }
 }
 

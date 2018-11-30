@@ -1,117 +1,85 @@
-const { jsonData, cycleJsonData } = require('./jsonTestData');
-const {
-    cloneEntityAndRelatedEntities,
-    createEntityMap,
-    cloneEntities,
-    convertEntityMapsToJson,
-    createUsedIdsSet,
-    generateId
-} = require('../clone-entity');
+const { jsonData, cycleJsonData } = require('./json-test-data');
+const EntityGraph = require('../entity-graph');
 const Entity = require('../entity');
 
+describe('EntityGraph', () => {
+    const eg = new EntityGraph();
+
+    describe('constructGraph method', () => {
+        it('should throw an error if input is not valid JSON or formatted correctly', () => {
+            expect(() => eg.constructGraph({ entities: { entity_id: '1' }})).toThrow();
+        });
+
+        eg.constructGraph(jsonData);
+
+        it('should create and return a map of ids to entities', () => {
+            expect(eg.adjacencyList.has(3)).toBe(true);
+            expect(eg.adjacencyList.has(5)).toBe(true);
+            expect(eg.adjacencyList.has(7)).toBe(true);
+            expect(eg.adjacencyList.has(11)).toBe(true);
+        });
+
+        it('should add ids to the usedIds set', () => {
+            expect(eg.usedIds.has(3)).toBe(true);
+            expect(eg.usedIds.has(5)).toBe(true);
+            expect(eg.usedIds.has(7)).toBe(true);
+            expect(eg.usedIds.has(11)).toBe(true);
+        });
+
+        it('should add the original formatted data to the entities and links properties', () => {
+            expect(eg.entities).toEqual(jsonData.entities);
+            expect(eg.links).toEqual(jsonData.links);
+        });
+    });
+
+    describe('cloneEntityAndRelatedEntities method', () => {
+        it('should throw an error if id is not found in jsonData', () => {
+            expect(() => eg.cloneEntityAndRelatedEntities(4)).toThrow();
+        });
+
+        it('should clone the input entity and its related entities and add them to the graph', () => {
+            expect(eg.cloneEntityAndRelatedEntities(5).size).toEqual(7);
+        });
+
+        const egCycle = new EntityGraph();
+        egCycle.constructGraph(cycleJsonData);
+        egCycle.cloneEntityAndRelatedEntities(7)
+
+        it('should handle link cycles', () => {
+            expect(egCycle.adjacencyList.size).toEqual(7);
+        });
+
+        it('should add clonedIds to the usedIds set', () => {
+            expect(eg.usedIds.size).toEqual(7);
+            expect(egCycle.usedIds.size).toEqual(7);
+        });
+
+        it('should update the entities and links properties with the new cloned data', () => {
+            expect(eg.entities.length).toEqual(7);
+            expect(eg.links.length).toEqual(7);
+            expect(egCycle.entities.length).toEqual(7);
+            expect(egCycle.links.length).toEqual(10);
+        });
+    });
+})
+
 describe('Entity class', () => {
-    const entity1 = new Entity(1, 'EntityA');
+    const entity1 = new Entity(1, 'EntityA', 'the original entity');
     test('addLink method should add an id to the links property', () => {
         entity1.addLink(2);
         expect(entity1.links.has(2)).toBe(true);
     });
 
-    test('cloneId method should return a new Entity object with the same name', () => {
-        const entity1Clone = entity1.clone(3);
+    test('clone method should return a new Entity object with the same name & description', () => {
+        const entity1Clone = entity1.clone();
         expect(entity1Clone.name === entity1.name).toBe(true);
+        expect(entity1Clone.description === entity1.description).toBe(true);
     });
 
-    test('toJSON method should return an object formatted to the specification', () => {
-        const entity1JSON = entity1.toJSON();
-        expect(entity1JSON.entity.entity_id === entity1.id).toBe(true);
-        expect(entity1JSON.entity.name === entity1.name).toBe(true);
-        expect(entity1JSON.links[0].to).toEqual(Array.from(entity1.links)[0]);
-    });
-});
-
-describe('cloneEntityAndRelatedEntities', () => {
-    it('should return a new object with cloned entities if id is found', () => {
-        expect(typeof cloneEntityAndRelatedEntities(jsonData, 3) === 'object').toBe(true);
-    });
-
-    it('should throw an error if id is not found in jsonData', () => {
-        expect(() => cloneEntityAndRelatedEntities(jsonData, 4)).toThrow();
-    });
-});
-
-describe('createEntityMap', () => {
-    const idToEntityMap = createEntityMap(jsonData, 5, 1337);
-
-    it('should create a key-value pair for each entity', () => {
-        expect(idToEntityMap.has(3)).toBe(true);
-        expect(idToEntityMap.has(5)).toBe(true);
-        expect(idToEntityMap.has(7)).toBe(true);
-        expect(idToEntityMap.has(11)).toBe(true);
-    });
-
-    it('should add links to the initialCloneId', () => {
-        expect(idToEntityMap.get(3).links.has(1337)).toBe(true);
-    });
-});
-
-describe('cloneEntities', () => {
-    const idToEntityMap = createEntityMap(jsonData, 7, 1337);
-    const usedIds = createUsedIdsSet(jsonData);
-    const originalIdToClonedEntityMap = cloneEntities(idToEntityMap, 7, 1337, usedIds);
-
-    it('should return a map object with keys 7 and 11', () => {
-        expect(originalIdToClonedEntityMap.has(7)).toBe(true);
-        expect(originalIdToClonedEntityMap.has(11)).toBe(true);
-    });
-
-    it('should not have cloned entity_id 5', () => {
-        expect(originalIdToClonedEntityMap.has(5)).toBe(false);
-    });
-});
-
-describe('cloneEntities (with 3 entities linked cycle)', () => {
-    const idToEntityMap = createEntityMap(cycleJsonData, 7, 1337);
-    const usedIds = createUsedIdsSet(jsonData);
-    const originalIdToClonedEntityMap = cloneEntities(idToEntityMap, 7, 1337, usedIds);
-
-    it('should return a map object with keys 5, 7 and 11', () => {
-        expect(originalIdToClonedEntityMap.has(5)).toBe(true);
-        expect(originalIdToClonedEntityMap.has(7)).toBe(true);
-        expect(originalIdToClonedEntityMap.has(11)).toBe(true);
-    });
-
-    it('should not have 3 keys total', () => {
-        expect(originalIdToClonedEntityMap.size).toBe(3);
-    });
-});
-
-describe('convertEntityMapsToJson', () => {
-    const idToEntityMap = createEntityMap(jsonData, 5, 1337);
-    const usedIds = createUsedIdsSet(jsonData);
-    const originalIdToClonedEntityMap = cloneEntities(idToEntityMap, 5, 1337, usedIds);
-    const newJsonEntities = convertEntityMapsToJson(idToEntityMap, originalIdToClonedEntityMap);
-
-    it('should return a new JSON formatted object with all entities and links', () => {
-        expect(typeof newJsonEntities === 'object').toBe(true);
-        expect(newJsonEntities.entities.length === 7).toBe(true);
-        expect(newJsonEntities.links.length === 7).toBe(true);
-    });
-});
-
-describe('createUsedIdsSet', () => {
-    const usedIds = createUsedIdsSet(jsonData);
-    
-    it ('should create a set of used Id\'s', () => {
-        expect(usedIds.size).toEqual(jsonData.entities.length);
-    });
-});
-
-describe('generateId', () => {
-    const usedIds = createUsedIdsSet(jsonData);
-    const initialSize = usedIds.size;
-
-    it('should create a unique Id and add it to the set', () => {
-        generateId(usedIds);
-        expect(usedIds.size).toEqual(initialSize + 1);
+    test('format method should return an object formatted to the specification', () => {
+        const formattedEntity = entity1.format();
+        expect(formattedEntity.entity.entity_id === entity1.id).toBe(true);
+        expect(formattedEntity.entity.name === entity1.name).toBe(true);
+        expect(formattedEntity.links[0].to).toEqual(Array.from(entity1.links)[0]);
     });
 });

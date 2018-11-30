@@ -10,11 +10,19 @@ class Entity {
         this.links.add(linkedEntityId);
     }
 
-    clone(cloneId) {
-        return new Entity(cloneId, this.name, this.description);
+    clone(usedIds) {
+        const idGenerator = () => Math.round(Math.random() * Number.MAX_SAFE_INTEGER);
+        let newId = idGenerator();
+        if (usedIds) {
+            while (usedIds.has(newId)) {
+                newId = idGenerator();
+            }
+            usedIds.add(newId);
+        }
+        return new Entity(newId, this.name, this.description);
     }
 
-    toJSON() {
+    format() {
         const { id, name, description, links } = this;
 
         const entity = {

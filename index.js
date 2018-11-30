@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { cloneEntityAndRelatedEntities } = require('./clone-entity');
 
-console.log(cloneEntity());
+console.log(JSON.stringify(cloneEntity()));
 
 function cloneEntity() {
     // command line arguments/inputs

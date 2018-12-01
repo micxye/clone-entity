@@ -13,10 +13,10 @@ describe('EntityGraph class', () => {
         eg.constructGraph(parsedJsonData);
 
         it('should create and return a map of ids to entities', () => {
-            expect(eg.adjacencyList.has(3)).toBe(true);
-            expect(eg.adjacencyList.has(5)).toBe(true);
-            expect(eg.adjacencyList.has(7)).toBe(true);
-            expect(eg.adjacencyList.has(11)).toBe(true);
+            expect(eg.idToEntity.has(3)).toBe(true);
+            expect(eg.idToEntity.has(5)).toBe(true);
+            expect(eg.idToEntity.has(7)).toBe(true);
+            expect(eg.idToEntity.has(11)).toBe(true);
         });
 
         it('should add ids to the usedIds set', () => {
@@ -46,7 +46,7 @@ describe('EntityGraph class', () => {
         egCycle.cloneEntityAndRelatedEntities(7)
 
         it('should handle link cycles', () => {
-            expect(egCycle.adjacencyList.size).toEqual(7);
+            expect(egCycle.idToEntity.size).toEqual(7);
         });
 
         it('should add clonedIds to the usedIds set', () => {

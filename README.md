@@ -8,7 +8,7 @@ This script requires node.js to run. Download that first!
 3. Enter 'npm start [JSONfile] [entityid]'. Make sure to enter the file path for the JSON file relative to the folder!
   
 ```
-npm start examples/example.json 5
+npm start json_files/example.json 5
 ```
 
 ### To Test

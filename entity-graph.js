@@ -3,7 +3,7 @@ const Entity = require('./entity');
 
 class EntityGraph {
     constructor() {
-        this.adjacencyList = new Map();
+        this.idToEntity = new Map();
         this.entities = [];
         this.links = [];
         this.usedIds = new Set();
@@ -26,24 +26,24 @@ class EntityGraph {
             entity.addLink(link.to);
         });
 
-        return this.adjacencyList = idToEntity;
+        return this.idToEntity = idToEntity;
     }
 
     cloneEntityAndRelatedEntities(id) {
-        const initialEntity = this.adjacencyList.get(id);
+        const initialEntity = this.idToEntity.get(id);
         if (!initialEntity) {
             throw new Error(`input entity id ${id} not found`);
         }
         const initialClone = initialEntity.clone(this.usedIds);
 
-        _addLinksToInitialClone(this.adjacencyList, this.links, id, initialClone.id);
-        _cloneEntitiesAndAddToGraph(this.adjacencyList, id, initialClone, this.usedIds);
+        _addLinksToInitialClone(this.idToEntity, this.links, id, initialClone.id);
+        _cloneRelatedEntities(this.idToEntity, id, initialClone, this.usedIds);
         
-        const newEntitiesAndLinks = _formatEntitiesAndLinks(this.adjacencyList);
+        const newEntitiesAndLinks = _formatEntitiesAndLinks(this.idToEntity);
         this.entities = newEntitiesAndLinks.entities;
         this.links = newEntitiesAndLinks.links;
 
-        return this.adjacencyList;
+        return this.idToEntity;
     }
 
     toJSON(space = 4) {
@@ -60,12 +60,21 @@ function _validateData(parsedJsonData) {
     }
 }
 
-function _cloneEntitiesAndAddToGraph(idToEntity, id, initialClone, usedIds) {
+function _addLinksToInitialClone(idToEntity, links, originalId, initialCloneId) {
+    links.forEach(link => {
+        if (link.to === originalId) {
+            const entity = idToEntity.get(link.from);
+            entity.addLink(initialCloneId);
+        }
+    });
+}
+
+function _cloneRelatedEntities(idToEntity, id, initialClone, usedIds) {
     const originalIdToClonedEntity = new Map();
     originalIdToClonedEntity.set(id, initialClone);
 
     const visitedEntityIds = new Set(); // for cycle detection
-
+    // clone related entities
     originalIdToClonedEntity.forEach((clonedEntity, originalId) => {
         const originalEntity = idToEntity.get(originalId);
         originalEntity.links.forEach(linkedId => {
@@ -87,15 +96,6 @@ function _cloneEntitiesAndAddToGraph(idToEntity, id, initialClone, usedIds) {
     // add cloned entities to graph
     originalIdToClonedEntity.forEach(entity => {
         idToEntity.set(entity.id, entity);
-    });
-}
-
-function _addLinksToInitialClone(idToEntity, links, originalId, initialCloneId) {
-    links.forEach(link => {
-        const entity = idToEntity.get(link.from);
-        if (link.to === originalId) {
-            entity.addLink(initialCloneId);
-        }
     });
 }
 

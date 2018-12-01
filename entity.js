@@ -10,15 +10,7 @@ class Entity {
         this.links.add(linkedEntityId);
     }
 
-    clone(usedIds) {
-        const idGenerator = () => Math.round(Math.random() * Number.MAX_SAFE_INTEGER);
-        let newId = idGenerator();
-        if (usedIds) {
-            while (usedIds.has(newId)) {
-                newId = idGenerator();
-            }
-            usedIds.add(newId);
-        }
+    clone(newId) {
         return new Entity(newId, this.name, this.description);
     }
 

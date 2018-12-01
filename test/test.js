@@ -13,22 +13,10 @@ describe('EntityGraph class', () => {
         eg.constructGraph(parsedJsonData);
 
         it('should create and return a map of ids to entities', () => {
-            expect(eg.idToEntity.has(3)).toBe(true);
-            expect(eg.idToEntity.has(5)).toBe(true);
-            expect(eg.idToEntity.has(7)).toBe(true);
-            expect(eg.idToEntity.has(11)).toBe(true);
-        });
-
-        it('should add ids to the usedIds set', () => {
-            expect(eg.usedIds.has(3)).toBe(true);
-            expect(eg.usedIds.has(5)).toBe(true);
-            expect(eg.usedIds.has(7)).toBe(true);
-            expect(eg.usedIds.has(11)).toBe(true);
-        });
-
-        it('should add the original formatted data to the entities and links properties', () => {
-            expect(eg.entities).toEqual(parsedJsonData.entities);
-            expect(eg.links).toEqual(parsedJsonData.links);
+            expect(eg.idToEntityMap.has(3)).toBe(true);
+            expect(eg.idToEntityMap.has(5)).toBe(true);
+            expect(eg.idToEntityMap.has(7)).toBe(true);
+            expect(eg.idToEntityMap.has(11)).toBe(true);
         });
     });
 
@@ -46,19 +34,14 @@ describe('EntityGraph class', () => {
         egCycle.cloneEntityAndRelatedEntities(7)
 
         it('should handle link cycles', () => {
-            expect(egCycle.idToEntity.size).toEqual(7);
+            expect(egCycle.idToEntityMap.size).toEqual(7);
         });
+    });
 
-        it('should add clonedIds to the usedIds set', () => {
-            expect(eg.usedIds.size).toEqual(7);
-            expect(egCycle.usedIds.size).toEqual(7);
-        });
-
-        it('should update the entities and links properties with the newly cloned data', () => {
-            expect(eg.entities.length).toEqual(7);
-            expect(eg.links.length).toEqual(7);
-            expect(egCycle.entities.length).toEqual(7);
-            expect(egCycle.links.length).toEqual(10);
+    describe('_generateId private method', () => {
+        it('should generate a unique id', () => {
+            const uniqueId = eg._generateId();
+            expect(eg.idToEntityMap.has(uniqueId)).toBe(false);
         });
     });
 
